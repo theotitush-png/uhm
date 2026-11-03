@@ -13,6 +13,11 @@ public abstract class Module {
     private boolean holdMode;
     private KeyBinding keyBinding;
 
+    private boolean hasDelay;
+    private int delay;
+    private int minDelay;
+    private int maxDelay;
+
     protected Module(String name, String description, int defaultKey, boolean holdByDefault) {
         this.name = name;
         this.description = description;
@@ -27,6 +32,21 @@ public abstract class Module {
     public boolean isEnabled() { return holdMode ? held : toggled; }
     public void setKeyBinding(KeyBinding kb) { this.keyBinding = kb; }
     public KeyBinding getKeyBinding() { return keyBinding; }
+
+    protected void enableDelay(int def, int min, int max) {
+        hasDelay = true;
+        delay = def;
+        minDelay = min;
+        maxDelay = max;
+    }
+
+    public boolean hasDelay() { return hasDelay; }
+    public int getDelay() { return delay; }
+
+    public void changeDelay(int amount) {
+        if (!hasDelay) return;
+        delay = Math.max(minDelay, Math.min(maxDelay, delay + amount));
+    }
 
     public void pollKey(MinecraftClient mc) {
         if (keyBinding == null) return;
