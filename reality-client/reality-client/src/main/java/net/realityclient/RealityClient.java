@@ -9,7 +9,6 @@ import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.realityclient.gui.ClickGuiScreen;
-import net.realityclient.module.LungeMacro;
 import net.realityclient.module.Module;
 import net.realityclient.module.SpearMacro;
 import org.lwjgl.glfw.GLFW;
@@ -30,7 +29,6 @@ public class RealityClient implements ClientModInitializer {
                 new KeyBinding("key.realityclient.gui",
                         InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, CATEGORY));
 
-        register(new LungeMacro());
         register(new SpearMacro());
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
