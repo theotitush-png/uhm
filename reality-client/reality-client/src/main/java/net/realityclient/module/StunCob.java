@@ -18,8 +18,11 @@ import net.minecraft.util.math.Vec3d;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * StunCob - cobweb stun combo.
- * Hold the key while aiming at a player: places a cobweb on them, then hits with your sword.
+ * StunCob - cobweb stun combo with shield break.
+ * Hold the key while aiming at a player:
+ *   1. places a cobweb on them
+ *   2. if they are blocking with a shield, hits them with an axe to break it
+ *   3. otherwise hits with your sword
  * Delay = ticks between steps (change it in the GUI, lower is faster).
  */
 public class StunCob extends Module {
@@ -29,7 +32,7 @@ public class StunCob extends Module {
     private int previousSlot = -1;
 
     public StunCob() {
-        super("StunCob", "Cobweb stun combo: webs the target, then hits. Needs cobweb + sword in hotbar.", GLFW.GLFW_KEY_C, true);
+        super("StunCob", "Webs the target, breaks their shield with an axe, then hits. Needs cobweb + sword + axe in hotbar.", GLFW.GLFW_KEY_C, true);
         enableDelay(3, 1, 20);
     }
 
@@ -58,11 +61,13 @@ public class StunCob extends Module {
         if (target == null) return;
 
         int webSlot = -1;
-        int weaponSlot = -1;
+        int swordSlot = -1;
+        int axeSlot = -1;
         for (int i = 0; i < 9; i++) {
             ItemStack s = p.getInventory().getStack(i);
             if (s.isOf(Items.COBWEB) && webSlot == -1) webSlot = i;
-            if (s.isIn(ItemTags.SWORDS) && weaponSlot == -1) weaponSlot = i;
+            if (s.isIn(ItemTags.SWORDS) && swordSlot == -1) swordSlot = i;
+            if (s.isIn(ItemTags.AXES) && axeSlot == -1) axeSlot = i;
         }
 
         BlockPos feet = target.getBlockPos();
@@ -70,8 +75,8 @@ public class StunCob extends Module {
         boolean alreadyWebbed = mc.world.getBlockState(feet).isOf(Blocks.COBWEB);
         boolean canPlace = !mc.world.getBlockState(below).isAir() && mc.world.getBlockState(feet).isAir();
 
+        // 1. Web them first
         if (!alreadyWebbed && canPlace && webSlot != -1) {
-            // Place the cobweb on the block the target is standing on
             p.getInventory().setSelectedSlot(webSlot);
             Vec3d hit = Vec3d.ofCenter(below).add(0, 0.5, 0);
             BlockHitResult bhr = new BlockHitResult(hit, Direction.UP, below, false);
@@ -81,8 +86,19 @@ public class StunCob extends Module {
             return;
         }
 
-        if (weaponSlot != -1) {
-            p.getInventory().setSelectedSlot(weaponSlot);
+        // 2. Break their shield with an axe if they are blocking
+        boolean blocking = target instanceof LivingEntity le && le.isBlocking();
+        if (blocking && axeSlot != -1) {
+            p.getInventory().setSelectedSlot(axeSlot);
+            mc.interactionManager.attackEntity(p, target);
+            p.swingHand(Hand.MAIN_HAND);
+            cooldown = getDelay();
+            return;
+        }
+
+        // 3. Otherwise hit with the sword
+        if (swordSlot != -1) {
+            p.getInventory().setSelectedSlot(swordSlot);
             mc.interactionManager.attackEntity(p, target);
             p.swingHand(Hand.MAIN_HAND);
             cooldown = getDelay();
