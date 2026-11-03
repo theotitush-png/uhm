@@ -4,14 +4,18 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
 import net.realityclient.RealityClient;
 import net.realityclient.module.Module;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 
 public class ClickGuiScreen extends Screen {
-    private static final int W = 170;
+    private static final int W = 190;
     private static final int ROW = 24;
     private static final int HEADER = 32;
 
@@ -21,9 +25,12 @@ public class ClickGuiScreen extends Screen {
     private static final int ROW_OFF = 0xFF12261A;
     private static final int ROW_HOVER = 0xFF1A3626;
     private static final int ROW_ON = 0xFF14532D;
+    private static final int KEY_BG = 0xFF0A140E;
     private static final int TEXT = 0xFFFFFFFF;
     private static final int TEXT_DIM = 0xFF8BA394;
     private static final int TEXT_ACCENT = 0xFFBBF7D0;
+
+    private Module listening = null;
 
     public ClickGuiScreen() {
         super(Text.literal(RealityClient.NAME));
@@ -34,6 +41,17 @@ public class ClickGuiScreen extends Screen {
     private int panelY() {
         int total = HEADER + RealityClient.MODULES.size() * ROW;
         return height / 2 - total / 2;
+    }
+
+    private String keyText(Module m) {
+        if (listening == m) return "[...]";
+        KeyBinding kb = m.getKeyBinding();
+        if (kb == null) return "[?]";
+        return "[" + kb.getBoundKeyLocalizedText().getString() + "]";
+    }
+
+    private int keyBoxWidth(Module m) {
+        return textRenderer.getWidth(keyText(m)) + 8;
     }
 
     @Override
@@ -62,13 +80,25 @@ public class ClickGuiScreen extends Screen {
             if (on) ctx.fill(x, ry, x + 3, ry + ROW, ACCENT);
 
             ctx.drawTextWithShadow(textRenderer, m.getName(), x + 12, ry + 8, on ? TEXT_ACCENT : TEXT);
+
+            // key box (click to rebind)
+            String kt = keyText(m);
+            int kw = keyBoxWidth(m);
+            int kx = x + W - kw - 6;
+            ctx.fill(kx, ry + 4, kx + kw, ry + ROW - 4, KEY_BG);
+            ctx.drawTextWithShadow(textRenderer, kt, kx + 4, ry + 8, listening == m ? ACCENT : TEXT_ACCENT);
+
+            // mode tag
             String tag = m.isHoldMode() ? "HOLD" : "TOGGLE";
             int tw = textRenderer.getWidth(tag);
-            ctx.drawTextWithShadow(textRenderer, tag, x + W - tw - 8, ry + 8, TEXT_DIM);
+            ctx.drawTextWithShadow(textRenderer, tag, kx - tw - 8, ry + 8, TEXT_DIM);
 
-            if (hover) tip = m.getDescription() + "  (right click: hold/toggle)";
+            if (hover) tip = m.getDescription() + "  (click key box to rebind, right click: hold/toggle)";
         }
 
+        if (listening != null) {
+            tip = "Press a key to bind it, Escape to cancel";
+        }
         if (tip != null) {
             ctx.drawTextWithShadow(textRenderer, tip, x, y + total + 8, TEXT_DIM);
         }
@@ -83,14 +113,40 @@ public class ClickGuiScreen extends Screen {
         double mx = click.x();
         double my = click.y();
         for (int i = 0; i < mods.size(); i++) {
+            Module m = mods.get(i);
             int ry = y + HEADER + i * ROW;
             if (mx >= x && mx < x + W && my >= ry && my < ry + ROW) {
                 MinecraftClient mc = MinecraftClient.getInstance();
-                if (click.button() == 0) mods.get(i).toggle(mc);
-                else if (click.button() == 1) mods.get(i).switchMode(mc);
+                int kw = keyBoxWidth(m);
+                int kx = x + W - kw - 6;
+                if (click.button() == 0 && mx >= kx && mx < kx + kw) {
+                    listening = m;
+                } else if (click.button() == 0) {
+                    listening = null;
+                    m.toggle(mc);
+                } else if (click.button() == 1) {
+                    listening = null;
+                    m.switchMode(mc);
+                }
                 return true;
             }
         }
+        listening = null;
         return super.mouseClicked(click, doubled);
+    }
+
+    @Override
+    public boolean keyPressed(KeyInput input) {
+        if (listening != null) {
+            int code = input.key();
+            if (code != GLFW.GLFW_KEY_ESCAPE && listening.getKeyBinding() != null) {
+                listening.getKeyBinding().setBoundKey(InputUtil.Type.KEYSYM.createFromCode(code));
+                KeyBinding.updateKeysByCode();
+                MinecraftClient.getInstance().options.write();
+            }
+            listening = null;
+            return true;
+        }
+        return super.keyPressed(input);
     }
 }
