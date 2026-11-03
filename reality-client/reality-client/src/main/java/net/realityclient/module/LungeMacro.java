@@ -34,7 +34,7 @@ public class LungeMacro extends Module {
     private static final int RESET_DELAY = 6;  // ticks before the next chain
 
     public LungeMacro() {
-        super("LungeMacro", "Chain lunges for rapid mace engagement.", GLFW.GLFW_KEY_R);
+        super("LungeMacro", "Chain lunges for rapid mace engagement.", GLFW.GLFW_KEY_R, true);
     }
 
     @Override
