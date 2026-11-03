@@ -15,9 +15,10 @@ import org.lwjgl.glfw.GLFW;
 import java.util.List;
 
 public class ClickGuiScreen extends Screen {
-    private static final int W = 190;
+    private static final int W = 270;
     private static final int ROW = 24;
     private static final int HEADER = 32;
+    private static final int BTN = 12;
 
     private static final int PANEL_BG = 0xF00C1A12;
     private static final int HEADER_BG = 0xF008120C;
@@ -52,6 +53,31 @@ public class ClickGuiScreen extends Screen {
 
     private int keyBoxWidth(Module m) {
         return textRenderer.getWidth(keyText(m)) + 8;
+    }
+
+    private String modeTag(Module m) {
+        return m.isHoldMode() ? "HOLD" : "TOGGLE";
+    }
+
+    /** x of the mode tag text */
+    private int tagX(Module m, int x) {
+        int kx = x + W - keyBoxWidth(m) - 6;
+        return kx - textRenderer.getWidth(modeTag(m)) - 8;
+    }
+
+    /** x of the "+" button (delay widget) */
+    private int plusX(Module m, int x) {
+        return tagX(m, x) - 8 - BTN;
+    }
+
+    private int valueX(Module m, int x) {
+        int dw = textRenderer.getWidth(String.valueOf(m.getDelay()));
+        return plusX(m, x) - 4 - dw;
+    }
+
+    /** x of the "-" button (delay widget) */
+    private int minusX(Module m, int x) {
+        return valueX(m, x) - 4 - BTN;
     }
 
     @Override
@@ -89,11 +115,23 @@ public class ClickGuiScreen extends Screen {
             ctx.drawTextWithShadow(textRenderer, kt, kx + 4, ry + 8, listening == m ? ACCENT : TEXT_ACCENT);
 
             // mode tag
-            String tag = m.isHoldMode() ? "HOLD" : "TOGGLE";
-            int tw = textRenderer.getWidth(tag);
-            ctx.drawTextWithShadow(textRenderer, tag, kx - tw - 8, ry + 8, TEXT_DIM);
+            String tag = modeTag(m);
+            ctx.drawTextWithShadow(textRenderer, tag, tagX(m, x), ry + 8, TEXT_DIM);
 
-            if (hover) tip = m.getDescription() + "  (click key box to rebind, right click: hold/toggle)";
+            // delay widget
+            if (m.hasDelay()) {
+                int mx0 = minusX(m, x);
+                int px0 = plusX(m, x);
+                ctx.fill(mx0, ry + 6, mx0 + BTN, ry + ROW - 6, KEY_BG);
+                ctx.drawTextWithShadow(textRenderer, "-", mx0 + 4, ry + 8, TEXT_ACCENT);
+                ctx.drawTextWithShadow(textRenderer, String.valueOf(m.getDelay()), valueX(m, x), ry + 8, TEXT);
+                ctx.fill(px0, ry + 6, px0 + BTN, ry + ROW - 6, KEY_BG);
+                ctx.drawTextWithShadow(textRenderer, "+", px0 + 3, ry + 8, TEXT_ACCENT);
+            }
+
+            if (hover) {
+                tip = m.getDescription() + "  (right click: hold/toggle)";
+            }
         }
 
         if (listening != null) {
@@ -119,8 +157,17 @@ public class ClickGuiScreen extends Screen {
                 MinecraftClient mc = MinecraftClient.getInstance();
                 int kw = keyBoxWidth(m);
                 int kx = x + W - kw - 6;
+
                 if (click.button() == 0 && mx >= kx && mx < kx + kw) {
                     listening = m;
+                } else if (click.button() == 0 && m.hasDelay()
+                        && mx >= minusX(m, x) && mx < minusX(m, x) + BTN) {
+                    listening = null;
+                    m.changeDelay(-1); // faster
+                } else if (click.button() == 0 && m.hasDelay()
+                        && mx >= plusX(m, x) && mx < plusX(m, x) + BTN) {
+                    listening = null;
+                    m.changeDelay(1);  // slower
                 } else if (click.button() == 0) {
                     listening = null;
                     m.toggle(mc);
