@@ -26,6 +26,7 @@ public abstract class Module {
     public boolean isHoldMode() { return holdMode; }
     public boolean isEnabled() { return holdMode ? held : toggled; }
     public void setKeyBinding(KeyBinding kb) { this.keyBinding = kb; }
+    public KeyBinding getKeyBinding() { return keyBinding; }
 
     public void pollKey(MinecraftClient mc) {
         if (keyBinding == null) return;
