@@ -10,15 +10,15 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * SpearMacro - hold the key to chain spear lunges.
+ * Speed = ticks between lunges (change it in the GUI, lower is faster).
  */
 public class SpearMacro extends Module {
-    private static final int INTERVAL = 4; // ticks between lunges
-
     private int cooldown = 0;
     private int previousSlot = -1;
 
     public SpearMacro() {
-        super("SpearMacro", "Hold to chain spear lunges.", GLFW.GLFW_KEY_V, true);
+        super("SpearMacro", "Hold to chain spear lunges. Delay = ticks between lunges (lower = faster).", GLFW.GLFW_KEY_V, true);
+        enableDelay(4, 1, 20);
     }
 
     @Override
@@ -53,6 +53,6 @@ public class SpearMacro extends Module {
 
         // Simulates a left click, which is the spear jab / lunge
         KeyBinding.onKeyPressed(InputUtil.Type.MOUSE.createFromCode(GLFW.GLFW_MOUSE_BUTTON_LEFT));
-        cooldown = INTERVAL;
+        cooldown = getDelay();
     }
 }
