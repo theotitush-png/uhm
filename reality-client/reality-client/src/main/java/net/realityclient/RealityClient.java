@@ -8,8 +8,11 @@ import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.realityclient.gui.ClickGuiScreen;
 import net.realityclient.module.LungeMacro;
 import net.realityclient.module.Module;
+import net.realityclient.module.SpearMacro;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,12 +22,21 @@ public class RealityClient implements ClientModInitializer {
     public static final List<Module> MODULES = new ArrayList<>();
     public static final KeyBinding.Category CATEGORY =
             KeyBinding.Category.create(Identifier.of("realityclient", "main"));
+    private static KeyBinding guiKey;
 
     @Override
     public void onInitializeClient() {
+        guiKey = KeyBindingHelper.registerKeyBinding(
+                new KeyBinding("key.realityclient.gui",
+                        InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, CATEGORY));
+
         register(new LungeMacro());
+        register(new SpearMacro());
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            while (guiKey.wasPressed()) {
+                if (client.currentScreen == null) client.setScreen(new ClickGuiScreen());
+            }
             for (Module m : MODULES) {
                 m.pollKey(client);
                 if (m.isEnabled() && client.player != null && client.world != null) m.onTick(client);
