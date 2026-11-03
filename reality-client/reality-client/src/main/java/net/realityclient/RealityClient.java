@@ -11,6 +11,7 @@ import net.minecraft.util.Identifier;
 import net.realityclient.gui.ClickGuiScreen;
 import net.realityclient.module.Module;
 import net.realityclient.module.SpearMacro;
+import net.realityclient.module.StunCob;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -30,6 +31,7 @@ public class RealityClient implements ClientModInitializer {
                         InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, CATEGORY));
 
         register(new SpearMacro());
+        register(new StunCob());
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (guiKey.wasPressed()) {
