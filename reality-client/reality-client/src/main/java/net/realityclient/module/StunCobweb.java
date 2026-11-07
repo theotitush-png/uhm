@@ -19,22 +19,28 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * Stuncobweb - hold the key while aiming at a player:
- * places a cobweb on them, then hits them with your sword.
- * Delay = ticks between steps (change it in the GUI, lower is faster).
+ *   1. SWORD hit, then AXE hit instantly (same tick) = stun / shield break
+ *   2. after the delay, place a COBWEB under them while they are stunned
+ * Then it repeats until you let go.
+ * Delay = ticks before the web / before the next combo (change it in the GUI, lower is faster).
  */
 public class StunCobweb extends Module {
+    private enum Step { COMBO, WEB }
+
     private static final double RANGE = 4.5;
 
+    private Step step = Step.COMBO;
     private int cooldown = 0;
     private int previousSlot = -1;
 
     public StunCobweb() {
-        super("Stuncobweb", "Webs the target, then hits them. Needs cobweb + sword in hotbar.", GLFW.GLFW_KEY_C, true);
+        super("Stuncobweb", "Sword + axe hit instantly (stun), then webs them. Needs sword + axe + cobweb in hotbar.", GLFW.GLFW_KEY_C, true);
         enableDelay(3, 1, 20);
     }
 
     @Override
     protected void onEnable(MinecraftClient mc) {
+        step = Step.COMBO;
         cooldown = 0;
         if (mc.player != null) previousSlot = mc.player.getInventory().getSelectedSlot();
     }
@@ -55,38 +61,51 @@ public class StunCobweb extends Module {
         if (cooldown > 0) { cooldown--; return; }
 
         Entity target = targetedEntity(mc);
-        if (target == null) return;
+        if (target == null) { step = Step.COMBO; return; }
 
-        int webSlot = -1;
         int swordSlot = -1;
+        int axeSlot = -1;
+        int webSlot = -1;
         for (int i = 0; i < 9; i++) {
             ItemStack s = p.getInventory().getStack(i);
-            if (s.isOf(Items.COBWEB) && webSlot == -1) webSlot = i;
             if (s.isIn(ItemTags.SWORDS) && swordSlot == -1) swordSlot = i;
+            if (s.isIn(ItemTags.AXES) && axeSlot == -1) axeSlot = i;
+            if (s.isOf(Items.COBWEB) && webSlot == -1) webSlot = i;
         }
 
-        BlockPos feet = target.getBlockPos();
-        BlockPos below = feet.down();
-        boolean alreadyWebbed = mc.world.getBlockState(feet).isOf(Blocks.COBWEB);
-        boolean canPlace = !mc.world.getBlockState(below).isAir() && mc.world.getBlockState(feet).isAir();
-
-        // 1. Web them
-        if (!alreadyWebbed && canPlace && webSlot != -1) {
-            p.getInventory().setSelectedSlot(webSlot);
-            Vec3d hit = Vec3d.ofCenter(below).add(0, 0.5, 0);
-            BlockHitResult bhr = new BlockHitResult(hit, Direction.UP, below, false);
-            mc.interactionManager.interactBlock(p, Hand.MAIN_HAND, bhr);
-            p.swingHand(Hand.MAIN_HAND);
-            cooldown = getDelay();
-            return;
-        }
-
-        // 2. Hit them with the sword
-        if (swordSlot != -1) {
-            p.getInventory().setSelectedSlot(swordSlot);
-            mc.interactionManager.attackEntity(p, target);
-            p.swingHand(Hand.MAIN_HAND);
-            cooldown = getDelay();
+        switch (step) {
+            case COMBO -> {
+                // sword hit
+                if (swordSlot != -1) {
+                    p.getInventory().setSelectedSlot(swordSlot);
+                    mc.interactionManager.attackEntity(p, target);
+                    p.swingHand(Hand.MAIN_HAND);
+                }
+                // axe hit instantly after (same tick) = stun
+                if (axeSlot != -1) {
+                    p.getInventory().setSelectedSlot(axeSlot);
+                    mc.interactionManager.attackEntity(p, target);
+                    p.swingHand(Hand.MAIN_HAND);
+                }
+                step = Step.WEB;
+                cooldown = getDelay();
+            }
+            case WEB -> {
+                BlockPos feet = target.getBlockPos();
+                BlockPos below = feet.down();
+                boolean canPlace = !mc.world.getBlockState(below).isAir()
+                        && mc.world.getBlockState(feet).isAir()
+                        && !mc.world.getBlockState(feet).isOf(Blocks.COBWEB);
+                if (canPlace && webSlot != -1) {
+                    p.getInventory().setSelectedSlot(webSlot);
+                    Vec3d hit = Vec3d.ofCenter(below).add(0, 0.5, 0);
+                    BlockHitResult bhr = new BlockHitResult(hit, Direction.UP, below, false);
+                    mc.interactionManager.interactBlock(p, Hand.MAIN_HAND, bhr);
+                    p.swingHand(Hand.MAIN_HAND);
+                }
+                step = Step.COMBO;
+                cooldown = getDelay();
+            }
         }
     }
 
