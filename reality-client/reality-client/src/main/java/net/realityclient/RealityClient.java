@@ -9,7 +9,9 @@ import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.realityclient.gui.ClickGuiScreen;
+import net.realityclient.module.AutoDrain;
 import net.realityclient.module.Module;
+import net.realityclient.module.ShieldBreaker;
 import net.realityclient.module.StunCobweb;
 import org.lwjgl.glfw.GLFW;
 
@@ -30,6 +32,8 @@ public class RealityClient implements ClientModInitializer {
                         InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, CATEGORY));
 
         register(new StunCobweb());
+        register(new ShieldBreaker());
+        register(new AutoDrain());
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (guiKey.wasPressed()) {
