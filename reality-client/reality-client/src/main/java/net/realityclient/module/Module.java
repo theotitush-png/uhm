@@ -12,6 +12,7 @@ public abstract class Module {
     private boolean held;
     private boolean holdMode;
     private KeyBinding keyBinding;
+    private String category = "COMBAT";
 
     private boolean hasDelay;
     private int delay;
@@ -32,6 +33,9 @@ public abstract class Module {
     public boolean isEnabled() { return holdMode ? held : toggled; }
     public void setKeyBinding(KeyBinding kb) { this.keyBinding = kb; }
     public KeyBinding getKeyBinding() { return keyBinding; }
+
+    public String getCategory() { return category; }
+    protected void setCategory(String category) { this.category = category; }
 
     protected void enableDelay(int def, int min, int max) {
         hasDelay = true;
