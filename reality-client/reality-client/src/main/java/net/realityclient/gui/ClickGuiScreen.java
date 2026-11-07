@@ -16,22 +16,29 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ClickGuiScreen extends Screen {
-    private static final int W = 200;
+    private static final int W = 170;
     private static final int ROW = 22;
-    private static final int HEADER = 28;
+    private static final int HEADER = 26;
     private static final int GAP = 12;
-    private static final int TOP = 44;
+    private static final int TOP = 40;
+    private static final int MARGIN = 20;
     private static final int BTN = 12;
 
-    private static final int PANEL_BG = 0xF00A1510;
-    private static final int HEADER_BG = 0xF0060D09;
+    private static final List<String> BASE_CATEGORIES =
+            List.of("COMBAT", "MOVEMENT", "RENDER", "MISC", "CLIENT");
+
+    // liquid glass palette
+    private static final int GLASS = 0x38E8FFF0;
+    private static final int GLASS_HEADER = 0x58E8FFF0;
+    private static final int BORDER = 0x90C9F7DA;
+    private static final int SHEEN = 0x80FFFFFF;
+    private static final int ROW_HOVER = 0x30FFFFFF;
+    private static final int ROW_ON = 0x6022C55E;
     private static final int ACCENT = 0xFF22C55E;
-    private static final int ROW_OFF = 0xFF0E1D15;
-    private static final int ROW_HOVER = 0xFF16301F;
-    private static final int ROW_ON = 0xFF1E6B3A;
-    private static final int KEY_BG = 0xFF070F0A;
+    private static final int ACCENT_SOFT = 0xAA22C55E;
+    private static final int KEY_BG = 0x50000000;
     private static final int TEXT = 0xFFFFFFFF;
-    private static final int TEXT_DIM = 0xFF8BA394;
+    private static final int TEXT_DIM = 0xFFD2E8DB;
     private static final int TEXT_ACCENT = 0xFFD1FADF;
 
     private Module listening = null;
@@ -43,7 +50,7 @@ public class ClickGuiScreen extends Screen {
     // ---- layout helpers ----
 
     private List<String> categories() {
-        List<String> out = new ArrayList<>();
+        List<String> out = new ArrayList<>(BASE_CATEGORIES);
         for (Module m : RealityClient.MODULES) {
             if (!out.contains(m.getCategory())) out.add(m.getCategory());
         }
@@ -58,9 +65,25 @@ public class ClickGuiScreen extends Screen {
         return out;
     }
 
-    private int panelX(int index, int count) {
-        int total = count * W + (count - 1) * GAP;
-        return width / 2 - total / 2 + index * (W + GAP);
+    /** Returns {x, y, height} for every panel, in the same order as categories(). */
+    private List<int[]> layout(List<String> cats) {
+        List<int[]> out = new ArrayList<>();
+        int x = MARGIN;
+        int y = TOP;
+        int rowH = 0;
+        for (String c : cats) {
+            int n = Math.max(1, inCategory(c).size());
+            int h = HEADER + n * ROW + 4;
+            if (x + W > width - MARGIN && x > MARGIN) {
+                x = MARGIN;
+                y += rowH + GAP;
+                rowH = 0;
+            }
+            out.add(new int[]{x, y, h});
+            x += W + GAP;
+            rowH = Math.max(rowH, h);
+        }
+        return out;
     }
 
     private String keyText(Module m) {
@@ -78,7 +101,7 @@ public class ClickGuiScreen extends Screen {
         return m.isHoldMode() ? "HOLD" : "TOGGLE";
     }
 
-    private int keyBoxX(Module m, int px) { return px + W - keyBoxWidth(m) - 6; }
+    private int keyBoxX(Module m, int px) { return px + W - keyBoxWidth(m) - 8; }
 
     private int tagX(Module m, int px) {
         return keyBoxX(m, px) - textRenderer.getWidth(modeTag(m)) - 8;
@@ -93,45 +116,81 @@ public class ClickGuiScreen extends Screen {
 
     private int minusX(Module m, int px) { return valueX(m, px) - 4 - BTN; }
 
+    // ---- glass drawing helpers ----
+
+    /** Filled rectangle with slightly rounded corners (no overlapping fills, so translucency stays even). */
+    private void glass(DrawContext ctx, int x, int y, int w, int h, int color) {
+        ctx.fill(x + 2, y, x + w - 2, y + 1, color);
+        ctx.fill(x + 1, y + 1, x + w - 1, y + 2, color);
+        ctx.fill(x, y + 2, x + w, y + h - 2, color);
+        ctx.fill(x + 1, y + h - 2, x + w - 1, y + h - 1, color);
+        ctx.fill(x + 2, y + h - 1, x + w - 2, y + h, color);
+    }
+
+    private void outline(DrawContext ctx, int x, int y, int w, int h, int color) {
+        ctx.fill(x + 2, y, x + w - 2, y + 1, color);
+        ctx.fill(x + 2, y + h - 1, x + w - 2, y + h, color);
+        ctx.fill(x, y + 2, x + 1, y + h - 2, color);
+        ctx.fill(x + w - 1, y + 2, x + w, y + h - 2, color);
+        ctx.fill(x + 1, y + 1, x + 2, y + 2, color);
+        ctx.fill(x + w - 2, y + 1, x + w - 1, y + 2, color);
+        ctx.fill(x + 1, y + h - 2, x + 2, y + h - 1, color);
+        ctx.fill(x + w - 2, y + h - 2, x + w - 1, y + h - 1, color);
+    }
+
     // ---- drawing ----
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        ctx.fill(0, 0, width, height, 0x99040A06);
-        ctx.drawTextWithShadow(textRenderer, RealityClient.NAME, 14, 14, ACCENT);
+        // vanilla blurred background first, our glass goes on top of it
+        super.render(ctx, mouseX, mouseY, delta);
+
+        ctx.drawTextWithShadow(textRenderer, RealityClient.NAME, MARGIN, 16, ACCENT);
 
         List<String> cats = categories();
+        List<int[]> rects = layout(cats);
         String tip = null;
 
         for (int c = 0; c < cats.size(); c++) {
             List<Module> mods = inCategory(cats.get(c));
-            int px = panelX(c, cats.size());
-            int py = TOP;
-            int total = HEADER + mods.size() * ROW + 4;
+            int px = rects.get(c)[0];
+            int py = rects.get(c)[1];
+            int ph = rects.get(c)[2];
 
-            ctx.fill(px - 1, py - 1, px + W + 1, py + total + 1, ACCENT);
-            ctx.fill(px, py, px + W, py + total, PANEL_BG);
-            ctx.fill(px, py, px + W, py + HEADER, HEADER_BG);
-            ctx.fill(px, py + HEADER - 1, px + W, py + HEADER, ACCENT);
-            ctx.drawTextWithShadow(textRenderer, cats.get(c), px + 12, py + 10, TEXT);
+            // panel body
+            glass(ctx, px, py, W, ph, GLASS);
+            // header
+            ctx.fill(px + 2, py + 1, px + W - 2, py + HEADER, GLASS_HEADER);
+            ctx.fill(px + 4, py + 1, px + W - 4, py + 2, SHEEN);
+            ctx.fill(px + 10, py + HEADER, px + W - 10, py + HEADER + 1, ACCENT_SOFT);
+            ctx.drawTextWithShadow(textRenderer, cats.get(c), px + 12, py + 9, TEXT);
+            outline(ctx, px, py, W, ph, BORDER);
+
+            if (mods.isEmpty()) {
+                ctx.drawTextWithShadow(textRenderer, "No modules yet", px + 12, py + HEADER + 7, TEXT_DIM);
+                continue;
+            }
 
             for (int i = 0; i < mods.size(); i++) {
                 Module m = mods.get(i);
-                int ry = py + HEADER + i * ROW;
+                int ry = py + HEADER + 2 + i * ROW;
                 boolean hover = mouseX >= px && mouseX < px + W && mouseY >= ry && mouseY < ry + ROW;
                 boolean on = m.isEnabled();
 
-                ctx.fill(px, ry, px + W, ry + ROW, on ? ROW_ON : (hover ? ROW_HOVER : ROW_OFF));
-                if (on) ctx.fill(px, ry, px + 3, ry + ROW, ACCENT);
+                if (on) {
+                    ctx.fill(px + 3, ry, px + W - 3, ry + ROW, ROW_ON);
+                    ctx.fill(px + 3, ry, px + 5, ry + ROW, ACCENT);
+                } else if (hover) {
+                    ctx.fill(px + 3, ry, px + W - 3, ry + ROW, ROW_HOVER);
+                }
 
                 ctx.drawTextWithShadow(textRenderer, m.getName(), px + 12, ry + 7, on ? TEXT_ACCENT : TEXT);
 
                 // key box
-                String kt = keyText(m);
                 int kw = keyBoxWidth(m);
                 int kx = keyBoxX(m, px);
                 ctx.fill(kx, ry + 4, kx + kw, ry + ROW - 4, KEY_BG);
-                ctx.drawTextWithShadow(textRenderer, kt, kx + 4, ry + 7, listening == m ? ACCENT : TEXT_ACCENT);
+                ctx.drawTextWithShadow(textRenderer, keyText(m), kx + 4, ry + 7, listening == m ? ACCENT : TEXT_ACCENT);
 
                 // mode tag
                 ctx.drawTextWithShadow(textRenderer, modeTag(m), tagX(m, px), ry + 7, TEXT_DIM);
@@ -152,9 +211,7 @@ public class ClickGuiScreen extends Screen {
         }
 
         if (listening != null) tip = "Press a key to bind it, Escape to cancel";
-        if (tip != null) ctx.drawTextWithShadow(textRenderer, tip, 14, height - 18, TEXT_DIM);
-
-        super.render(ctx, mouseX, mouseY, delta);
+        if (tip != null) ctx.drawTextWithShadow(textRenderer, tip, MARGIN, height - 18, TEXT_DIM);
     }
 
     // ---- input ----
@@ -162,15 +219,17 @@ public class ClickGuiScreen extends Screen {
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
         List<String> cats = categories();
+        List<int[]> rects = layout(cats);
         double mx = click.x();
         double my = click.y();
 
         for (int c = 0; c < cats.size(); c++) {
             List<Module> mods = inCategory(cats.get(c));
-            int px = panelX(c, cats.size());
+            int px = rects.get(c)[0];
+            int py = rects.get(c)[1];
             for (int i = 0; i < mods.size(); i++) {
                 Module m = mods.get(i);
-                int ry = TOP + HEADER + i * ROW;
+                int ry = py + HEADER + 2 + i * ROW;
                 if (mx >= px && mx < px + W && my >= ry && my < ry + ROW) {
                     MinecraftClient mc = MinecraftClient.getInstance();
                     int kw = keyBoxWidth(m);
