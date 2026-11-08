@@ -10,6 +10,8 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.realityclient.gui.ClickGuiScreen;
 import net.realityclient.module.AutoDrain;
+import net.realityclient.module.FastPlace;
+import net.realityclient.module.FastXp;
 import net.realityclient.module.Module;
 import net.realityclient.module.ShieldBreaker;
 import net.realityclient.module.StunCobweb;
@@ -34,6 +36,8 @@ public class RealityClient implements ClientModInitializer {
         register(new StunCobweb());
         register(new ShieldBreaker());
         register(new AutoDrain());
+        register(new FastPlace());
+        register(new FastXp());
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (guiKey.wasPressed()) {
