@@ -37,19 +37,19 @@ public class ClickGuiScreen extends Screen {
     private static final SoundEvent CLICK_SOUND = SoundEvent.of(Identifier.of("realityclient", "click"));
 
     // liquid glass palette
-    private static final int GLASS = 0x58A8A1B4;
-    private static final int GLASS_HEADER = 0x70B9B1C3;
-    private static final int BORDER = 0x806D657A;
+    private static final int GLASS = 0x584A7198;
+    private static final int GLASS_HEADER = 0x70658DB8;
+    private static final int BORDER = 0x80618DBB;
     private static final int SHEEN = 0x70FFFFFF;
     private static final int ROW_HOVER = 0x38FFFFFF;
-    private static final int ROW_ON = 0xFFFF79BD;
+    private static final int ROW_ON = 0xFF55A9FF;
     private static final int SET_BG = 0x38000000;
-    private static final int ACCENT = 0xFFFF79BD;
-    private static final int ACCENT_SOFT = 0xAAFF79BD;
+    private static final int ACCENT = 0xFF55A9FF;
+    private static final int ACCENT_SOFT = 0xAA55A9FF;
     private static final int KEY_BG = 0x50000000;
     private static final int TEXT = 0xFFFFFFFF;
-    private static final int TEXT_DIM = 0xFFE5DDE8;
-    private static final int TEXT_ACCENT = 0xFFFFD5EA;
+    private static final int TEXT_DIM = 0xFFE0EAF5;
+    private static final int TEXT_ACCENT = 0xFFD5EAFF;
 
     private final Set<String> collapsed = new HashSet<>();
     private final Set<Module> expanded = new HashSet<>();
