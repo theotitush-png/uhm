@@ -6,5 +6,6 @@
   "description": "Reality Client",
   "environment": "client",
   "entrypoints": { "client": ["net.realityclient.RealityClient"] },
+  "mixins": ["realityclient.mixins.json"],
   "depends": { "fabricloader": ">=0.16.0", "minecraft": "~1.21.11", "fabric-api": "*" }
 }
