@@ -5,5 +5,7 @@
   "key.realityclient.autodrain": "AutoDrain",
   "key.realityclient.fastplace": "FastPlace",
   "key.realityclient.fastxp": "FastXP",
+  "key.realityclient.freecam": "Freecam",
+  "key.realityclient.xray": "Xray",
   "key.category.realityclient.main": "Reality Client"
 }
