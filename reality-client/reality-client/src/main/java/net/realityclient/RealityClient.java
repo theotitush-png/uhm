@@ -12,9 +12,11 @@ import net.realityclient.gui.ClickGuiScreen;
 import net.realityclient.module.AutoDrain;
 import net.realityclient.module.FastPlace;
 import net.realityclient.module.FastXp;
+import net.realityclient.module.Freecam;
 import net.realityclient.module.Module;
 import net.realityclient.module.ShieldBreaker;
 import net.realityclient.module.StunCobweb;
+import net.realityclient.module.Xray;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -38,6 +40,8 @@ public class RealityClient implements ClientModInitializer {
         register(new AutoDrain());
         register(new FastPlace());
         register(new FastXp());
+        register(new Freecam());
+        register(new Xray());
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (guiKey.wasPressed()) {
