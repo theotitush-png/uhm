@@ -21,14 +21,14 @@ import java.util.List;
 import java.util.Set;
 
 public class ClickGuiScreen extends Screen {
-    private static final int W = 170;
-    private static final int ROW = 22;
-    private static final int SROW = 18;
-    private static final int HEADER = 26;
-    private static final int GAP = 12;
-    private static final int TOP = 40;
+    private static final int W = 210;
+    private static final int ROW = 38;
+    private static final int SROW = 26;
+    private static final int HEADER = 34;
+    private static final int GAP = 14;
+    private static final int TOP = 106;
     private static final int MARGIN = 20;
-    private static final int BTN = 12;
+    private static final int BTN = 14;
 
     private static final List<String> BASE_CATEGORIES =
             List.of("COMBAT", "MOVEMENT", "RENDER", "MISC", "CLIENT");
@@ -37,19 +37,19 @@ public class ClickGuiScreen extends Screen {
     private static final SoundEvent CLICK_SOUND = SoundEvent.of(Identifier.of("realityclient", "click"));
 
     // liquid glass palette
-    private static final int GLASS = 0x38E8FFF0;
-    private static final int GLASS_HEADER = 0x58E8FFF0;
-    private static final int BORDER = 0x90C9F7DA;
-    private static final int SHEEN = 0x80FFFFFF;
-    private static final int ROW_HOVER = 0x30FFFFFF;
-    private static final int ROW_ON = 0x6022C55E;
+    private static final int GLASS = 0x58A8A1B4;
+    private static final int GLASS_HEADER = 0x70B9B1C3;
+    private static final int BORDER = 0x806D657A;
+    private static final int SHEEN = 0x70FFFFFF;
+    private static final int ROW_HOVER = 0x38FFFFFF;
+    private static final int ROW_ON = 0xFFFF79BD;
     private static final int SET_BG = 0x38000000;
-    private static final int ACCENT = 0xFF22C55E;
-    private static final int ACCENT_SOFT = 0xAA22C55E;
+    private static final int ACCENT = 0xFFFF79BD;
+    private static final int ACCENT_SOFT = 0xAAFF79BD;
     private static final int KEY_BG = 0x50000000;
     private static final int TEXT = 0xFFFFFFFF;
-    private static final int TEXT_DIM = 0xFFD2E8DB;
-    private static final int TEXT_ACCENT = 0xFFD1FADF;
+    private static final int TEXT_DIM = 0xFFE5DDE8;
+    private static final int TEXT_ACCENT = 0xFFFFD5EA;
 
     private final Set<String> collapsed = new HashSet<>();
     private final Set<Module> expanded = new HashSet<>();
@@ -60,6 +60,12 @@ public class ClickGuiScreen extends Screen {
     }
 
     // ---- data helpers ----
+
+    private String titleCase(String value) {
+        if (value == null || value.isEmpty()) return value;
+        String lower = value.toLowerCase(java.util.Locale.ROOT);
+        return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
+    }
 
     private List<String> categories() {
         List<String> out = new ArrayList<>(BASE_CATEGORIES);
@@ -159,7 +165,27 @@ public class ClickGuiScreen extends Screen {
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         super.render(ctx, mouseX, mouseY, delta);
 
-        ctx.drawTextWithShadow(textRenderer, RealityClient.NAME, MARGIN, 16, ACCENT);
+        // Screenshot-style navigation bar.
+        int navW = Math.min(650, width - 40);
+        int navX = (width - navW) / 2;
+        glass(ctx, navX, 10, navW, 42, 0x706F6A7B);
+        outline(ctx, navX, 10, navW, 42, 0x906A6275);
+        String[] tabs = {"Modules", "HUD", "Friends", "Theme", "Config", "Donut"};
+        int tabW = navW / tabs.length;
+        for (int i = 0; i < tabs.length; i++) {
+            int tx = navX + i * tabW + 4;
+            if (i == 0) glass(ctx, tx, 14, tabW - 8, 34, ACCENT);
+            int tw = textRenderer.getWidth(tabs[i]);
+            ctx.drawTextWithShadow(textRenderer, tabs[i],
+                    tx + (tabW - 8 - tw) / 2, 26, i == 0 ? 0xFF241A25 : TEXT_DIM);
+        }
+
+        // Search field visual, aligned below the navigation.
+        int searchW = Math.min(400, width - 80);
+        int searchX = (width - searchW) / 2;
+        glass(ctx, searchX, 62, searchW, 31, 0x704C4857);
+        outline(ctx, searchX, 62, searchW, 31, 0x806B6475);
+        ctx.drawTextWithShadow(textRenderer, "⌕  Search modules...", searchX + 14, 73, 0xFFBDB6C5);
 
         List<String> cats = categories();
         List<int[]> rects = layout(cats);
@@ -177,7 +203,7 @@ public class ClickGuiScreen extends Screen {
             ctx.fill(px + 2, py + 1, px + W - 2, py + HEADER, GLASS_HEADER);
             ctx.fill(px + 4, py + 1, px + W - 4, py + 2, SHEEN);
             ctx.fill(px + 10, py + HEADER, px + W - 10, py + HEADER + 1, ACCENT_SOFT);
-            ctx.drawTextWithShadow(textRenderer, cat, px + 12, py + 9, TEXT);
+            ctx.drawTextWithShadow(textRenderer, titleCase(cat), px + 12, py + 9, TEXT);
             ctx.drawTextWithShadow(textRenderer, isCollapsed ? ">" : "v", px + W - 16, py + 9, TEXT_DIM);
             outline(ctx, px, py, W, ph, BORDER);
 
