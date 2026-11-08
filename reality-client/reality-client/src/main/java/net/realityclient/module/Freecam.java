@@ -47,9 +47,6 @@ public class Freecam extends Module {
 
         cam = new OtherClientPlayerEntity(mc.world, p.getGameProfile());
         cam.setPosition(p.getX(), p.getY(), p.getZ());
-        cam.prevX = p.getX();
-        cam.prevY = p.getY();
-        cam.prevZ = p.getZ();
         cam.setYaw(p.getYaw());
         cam.setPitch(p.getPitch());
         mc.setCameraEntity(cam);
@@ -76,9 +73,6 @@ public class Freecam extends Module {
         double dx = forward * -Math.sin(yaw) + side * -Math.cos(yaw);
         double dz = forward * Math.cos(yaw) + side * -Math.sin(yaw);
 
-        cam.prevX = cam.getX();
-        cam.prevY = cam.getY();
-        cam.prevZ = cam.getZ();
         cam.setPosition(cam.getX() + dx * speed, cam.getY() + up * speed, cam.getZ() + dz * speed);
         cam.setYaw(p.getYaw());
         cam.setPitch(p.getPitch());
