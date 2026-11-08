@@ -6,8 +6,11 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.sound.SoundEvent;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import net.realityclient.RealityClient;
 import net.realityclient.module.Module;
 import org.lwjgl.glfw.GLFW;
@@ -29,6 +32,9 @@ public class ClickGuiScreen extends Screen {
 
     private static final List<String> BASE_CATEGORIES =
             List.of("COMBAT", "MOVEMENT", "RENDER", "MISC", "CLIENT");
+
+    // click sound (assets/realityclient/sounds/click.ogg + assets/realityclient/sounds.json)
+    private static final SoundEvent CLICK_SOUND = SoundEvent.of(Identifier.of("realityclient", "click"));
 
     // liquid glass palette
     private static final int GLASS = 0x38E8FFF0;
@@ -244,6 +250,15 @@ public class ClickGuiScreen extends Screen {
 
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
+        boolean handled = handleClick(click, doubled);
+        if (handled) {
+            MinecraftClient.getInstance().getSoundManager()
+                    .play(PositionedSoundInstance.master(CLICK_SOUND, 1.0f));
+        }
+        return handled;
+    }
+
+    private boolean handleClick(Click click, boolean doubled) {
         List<String> cats = categories();
         List<int[]> rects = layout(cats);
         double mx = click.x();
