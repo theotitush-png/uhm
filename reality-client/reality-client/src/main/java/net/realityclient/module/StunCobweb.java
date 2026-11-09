@@ -6,6 +6,9 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
@@ -13,35 +16,41 @@ import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
+import net.realityclient.RealityClient;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.function.Predicate;
+
 /**
- * Stuncobweb - stun web combo:
- *   sword in hotbar slot 1, axe in slot 2, cobwebs in slot 8.
- *   Press the key while aiming at a player:
- *     1. select the axe (slot 2), wait until it is charged, hit them
- *        (repeat up to 3 times until their shield is down = stunned)
- *     2. select cobwebs (slot 8) and place a web under them
- *     3. swap back to the sword (slot 1)
+ * Stuncobweb - press the key while aiming at a player:
+ *   1. swap to your axe (slot 2, or the first axe in your hotbar)
+ *      and hit until their shield is down (max 3 hits, waits for the axe to charge)
+ *   2. swap to cobwebs (slot 8, or the first cobweb) and place a web under them
+ *   3. swap back to your sword (slot 1, or the first sword)
+ * Messages above the hotbar tell you what happened.
  */
 public class StunCobweb extends Module {
     private enum State { IDLE, STUN, WEB }
 
     private static final double RANGE = 4.5;
-    private static final int SWORD_SLOT = 0;  // hotbar slot 1
-    private static final int AXE_SLOT = 1;    // hotbar slot 2
-    private static final int WEB_SLOT = 7;    // hotbar slot 8
+    private static final int SWORD_PREF = 0; // hotbar slot 1
+    private static final int AXE_PREF = 1;   // hotbar slot 2
+    private static final int WEB_PREF = 7;   // hotbar slot 8
     private static final int MAX_HITS = 3;
 
     private State state = State.IDLE;
     private Entity target = null;
+    private int axeSlot = -1;
+    private int webSlot = -1;
+    private int swordSlot = -1;
+    private int previousSlot = -1;
     private int hits = 0;
     private int wait = 0;
     private int settle = 0;
     private int total = 0;
 
     public StunCobweb() {
-        super("Stuncobweb", "Axe (slot 2) stun until shield is down, cobweb (slot 8) under them, back to sword (slot 1).", GLFW.GLFW_KEY_C, true);
+        super("Stuncobweb", "Axe stun until shield is down, then cobweb under them, then back to sword.", GLFW.GLFW_KEY_C, true);
         ClientTickEvents.END_CLIENT_TICK.register(this::sequenceTick);
     }
 
@@ -49,8 +58,22 @@ public class StunCobweb extends Module {
     protected void onEnable(MinecraftClient mc) {
         ClientPlayerEntity p = mc.player;
         if (p == null || mc.currentScreen != null || state != State.IDLE) return;
+
         Entity t = targetedEntity(mc);
-        if (t == null) return;
+        if (t == null) {
+            RealityClient.chat(mc, "Stuncobweb: aim at a player first");
+            return;
+        }
+
+        axeSlot = findSlot(p, AXE_PREF, s -> s.isIn(ItemTags.AXES));
+        if (axeSlot == -1) {
+            RealityClient.chat(mc, "Stuncobweb: no axe in your hotbar");
+            return;
+        }
+        webSlot = findSlot(p, WEB_PREF, s -> s.isOf(Items.COBWEB));
+        swordSlot = findSlot(p, SWORD_PREF, s -> s.isIn(ItemTags.SWORDS));
+        previousSlot = p.getInventory().getSelectedSlot();
+
         target = t;
         hits = 0;
         wait = 0;
@@ -64,8 +87,17 @@ public class StunCobweb extends Module {
         // the sequence runs from its own tick handler (sequenceTick)
     }
 
+    private int findSlot(ClientPlayerEntity p, int preferred, Predicate<ItemStack> test) {
+        if (test.test(p.getInventory().getStack(preferred))) return preferred;
+        for (int i = 0; i < 9; i++) {
+            if (test.test(p.getInventory().getStack(i))) return i;
+        }
+        return -1;
+    }
+
     private void finish(ClientPlayerEntity p) {
-        p.getInventory().setSelectedSlot(SWORD_SLOT);
+        int back = swordSlot != -1 ? swordSlot : previousSlot;
+        if (back >= 0) p.getInventory().setSelectedSlot(back);
         state = State.IDLE;
         target = null;
     }
@@ -76,18 +108,24 @@ public class StunCobweb extends Module {
         if (p == null || mc.world == null || mc.interactionManager == null) { state = State.IDLE; return; }
 
         total++;
-        if (total > 80 || target == null || !target.isAlive() || p.distanceTo(target) > RANGE + 1.5) {
+        if (target == null || !target.isAlive() || p.distanceTo(target) > RANGE + 1.5) {
+            RealityClient.chat(mc, "Stuncobweb: lost the target");
+            finish(p);
+            return;
+        }
+        if (total > 80) {
+            RealityClient.chat(mc, "Stuncobweb: timed out");
             finish(p);
             return;
         }
 
         switch (state) {
             case STUN -> {
-                p.getInventory().setSelectedSlot(AXE_SLOT);
+                p.getInventory().setSelectedSlot(axeSlot);
 
                 if (settle > 0) { settle--; return; }
 
-                // after at least one hit: if their shield is down (or max hits reached), go to the web
+                // after at least one hit: go to the web once their shield is down (or max hits reached)
                 if (hits > 0) {
                     boolean stillBlocking = target instanceof LivingEntity le && le.isBlocking();
                     if (!stillBlocking || hits >= MAX_HITS) {
@@ -96,6 +134,7 @@ public class StunCobweb extends Module {
                     }
                 }
 
+                // wait until the axe is charged (servers without attack cooldown are always charged)
                 wait++;
                 boolean ready = p.getAttackCooldownProgress(0.5f) >= 0.9f || wait > 25;
                 if (!ready) return;
@@ -107,18 +146,33 @@ public class StunCobweb extends Module {
                 settle = 2; // give the server a moment to update their shield state
             }
             case WEB -> {
-                BlockPos feet = target.getBlockPos();
-                BlockPos below = feet.down();
-                boolean canPlace = !mc.world.getBlockState(below).isAir()
-                        && mc.world.getBlockState(feet).isAir()
-                        && !mc.world.getBlockState(feet).isOf(Blocks.COBWEB);
-                if (canPlace) {
-                    p.getInventory().setSelectedSlot(WEB_SLOT);
-                    Vec3d hit = Vec3d.ofCenter(below).add(0, 0.5, 0);
-                    BlockHitResult bhr = new BlockHitResult(hit, Direction.UP, below, false);
-                    mc.interactionManager.interactBlock(p, Hand.MAIN_HAND, bhr);
-                    p.swingHand(Hand.MAIN_HAND);
+                boolean placed = false;
+                String reason = "";
+
+                if (webSlot == -1) {
+                    reason = "no cobwebs in your hotbar";
+                } else {
+                    BlockPos feet = target.getBlockPos();
+                    BlockPos below = feet.down();
+                    if (mc.world.getBlockState(below).isAir()) {
+                        reason = "they are in the air";
+                    } else if (mc.world.getBlockState(feet).isOf(Blocks.COBWEB)) {
+                        reason = "already webbed";
+                    } else if (!mc.world.getBlockState(feet).isAir()) {
+                        reason = "no space at their feet";
+                    } else {
+                        p.getInventory().setSelectedSlot(webSlot);
+                        Vec3d hit = Vec3d.ofCenter(below).add(0, 0.5, 0);
+                        BlockHitResult bhr = new BlockHitResult(hit, Direction.UP, below, false);
+                        mc.interactionManager.interactBlock(p, Hand.MAIN_HAND, bhr);
+                        p.swingHand(Hand.MAIN_HAND);
+                        placed = true;
+                    }
                 }
+
+                RealityClient.chat(mc, placed
+                        ? "Stuncobweb: stunned + webbed"
+                        : "Stuncobweb: stun done, no web (" + reason + ")");
                 finish(p);
             }
             default -> { }
