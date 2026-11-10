@@ -10,6 +10,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.realityclient.gui.ClickGuiScreen;
 import net.realityclient.module.AutoDrain;
+import net.realityclient.module.BowBoost;
 import net.realityclient.module.FastPlace;
 import net.realityclient.module.FastXp;
 import net.realityclient.module.Freecam;
@@ -35,6 +36,7 @@ public class RealityClient implements ClientModInitializer {
                         InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, CATEGORY));
 
         register(new ShieldBreaker());
+        register(new BowBoost());
         register(new AutoDrain());
         register(new FastPlace());
         register(new FastXp());
