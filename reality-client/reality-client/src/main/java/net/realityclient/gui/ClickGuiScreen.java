@@ -282,14 +282,14 @@ public class ClickGuiScreen extends Screen {
                         ctx.drawTextWithShadow(textRenderer, rotation,
                                 rightEdge(px) - textRenderer.getWidth(rotation), ry + 5, TEXT_ACCENT);
 
-                        int py = y + 3 * SROW;
-                        ctx.drawTextWithShadow(textRenderer, "Target Pitch", px + 20, py + 5, TEXT_DIM);
+                        int pitchY = y + 3 * SROW;
+                        ctx.drawTextWithShadow(textRenderer, "Target Pitch", px + 20, pitchY + 5, TEXT_DIM);
                         String pitch = bb.getTargetPitch() + "°";
                         ctx.drawTextWithShadow(textRenderer, pitch,
-                                rightEdge(px) - textRenderer.getWidth(pitch), py + 5, TEXT);
+                                rightEdge(px) - textRenderer.getWidth(pitch), pitchY + 5, TEXT);
                         int left = delayTrackStart(px);
                         int right = delayTrackEnd(px);
-                        int trackY = py + 27;
+                        int trackY = pitchY + 27;
                         int knobX = left + (right - left) * bb.getTargetPitch() / 90;
                         ctx.fill(left, trackY, right, trackY + 2, 0xFF777777);
                         ctx.fill(left, trackY, knobX, trackY + 2, ACCENT);
