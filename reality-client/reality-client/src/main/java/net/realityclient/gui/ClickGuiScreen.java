@@ -85,7 +85,7 @@ public class ClickGuiScreen extends Screen {
     }
 
     private int settingCount(Module m) {
-        return m instanceof ShieldBreaker ? 5 : (m.hasDelay() ? 3 : 2);
+        return m instanceof ShieldBreaker ? 4 : (m.hasDelay() ? 3 : 2);
     }
 
     private int panelHeight(String cat) {
@@ -238,6 +238,31 @@ public class ClickGuiScreen extends Screen {
                     int n = settingCount(m);
                     ctx.fill(px + 3, y, px + W - 3, y + n * SROW, SET_BG);
 
+                    if (m instanceof ShieldBreaker sb) {
+                        ctx.drawTextWithShadow(textRenderer, "Enabled", px + 20, y + 5, TEXT_DIM);
+                        String enabled = sb.isEnabled() ? "ON" : "OFF";
+                        ctx.drawTextWithShadow(textRenderer, enabled, rightEdge(px) - textRenderer.getWidth(enabled), y + 5, sb.isEnabled() ? ACCENT : TEXT_DIM);
+
+                        int ay = y + SROW;
+                        ctx.drawTextWithShadow(textRenderer, "Attack Mode", px + 20, ay + 5, TEXT_DIM);
+                        String attackMode = sb.getAttackMode() == ShieldBreaker.AttackMode.AUTO ? "AUTO" : "MANUAL";
+                        ctx.drawTextWithShadow(textRenderer, attackMode, rightEdge(px) - textRenderer.getWidth(attackMode), ay + 5, TEXT_ACCENT);
+
+                        int by = y + 2 * SROW;
+                        ctx.drawTextWithShadow(textRenderer, "Break Type", px + 20, by + 5, TEXT_DIM);
+                        String breakMode = sb.getBreakMode() == ShieldBreaker.BreakMode.STUN ? "STUN" : "NORMAL";
+                        ctx.drawTextWithShadow(textRenderer, breakMode, rightEdge(px) - textRenderer.getWidth(breakMode), by + 5, TEXT_ACCENT);
+
+                        int dy = y + 3 * SROW;
+                        ctx.drawTextWithShadow(textRenderer, "Switch Delay", px + 20, dy + 5, TEXT_DIM);
+                        int mx0 = minusX(m, px);
+                        int px0 = plusX(px);
+                        ctx.fill(mx0, dy + 3, mx0 + BTN, dy + SROW - 3, KEY_BG);
+                        ctx.drawTextWithShadow(textRenderer, "-", mx0 + 4, dy + 5, TEXT_ACCENT);
+                        ctx.drawTextWithShadow(textRenderer, String.valueOf(m.getDelay()), valueX(m, px), dy + 5, TEXT);
+                        ctx.fill(px0, dy + 3, px0 + BTN, dy + SROW - 3, KEY_BG);
+                        ctx.drawTextWithShadow(textRenderer, "+", px0 + 3, dy + 5, TEXT_ACCENT);
+                    } else {
                     // keybind row
                     ctx.drawTextWithShadow(textRenderer, "Keybind", px + 20, y + 5, TEXT_DIM);
                     String kt = keyText(m);
@@ -276,7 +301,8 @@ public class ClickGuiScreen extends Screen {
                         String breakMode = sb.getBreakMode() == ShieldBreaker.BreakMode.STUN ? "STUN" : "NORMAL";
                         ctx.drawTextWithShadow(textRenderer, breakMode, rightEdge(px) - textRenderer.getWidth(breakMode), by + 5, TEXT_ACCENT);
                     }
-                    y += n * SROW;
+
+                    }                    y += n * SROW;
                 }
             }
         }
@@ -350,23 +376,36 @@ public class ClickGuiScreen extends Screen {
 
     private void handleSetting(Module m, int idx, double mx, int px) {
         MinecraftClient mc = MinecraftClient.getInstance();
+        if (m instanceof ShieldBreaker sb) {
+            if (idx == 0) {
+                listening = null;
+                sb.toggle(mc);
+            } else if (idx == 1) {
+                listening = null;
+                sb.cycleAttackMode();
+            } else if (idx == 2) {
+                listening = null;
+                sb.cycleBreakMode();
+            } else if (idx == 3) {
+                listening = null;
+                int mx0 = minusX(m, px);
+                int px0 = plusX(px);
+                if (mx >= mx0 && mx < mx0 + BTN) m.changeDelay(-1);
+                else if (mx >= px0 && mx < px0 + BTN) m.changeDelay(1);
+            }
+            return;
+        }
         if (idx == 0) {
-            listening = m;                 // keybind
+            listening = m;
         } else if (idx == 1) {
             listening = null;
-            m.switchMode(mc);              // hold / toggle
+            m.switchMode(mc);
         } else if (idx == 2 && m.hasDelay()) {
             listening = null;
             int mx0 = minusX(m, px);
             int px0 = plusX(px);
             if (mx >= mx0 && mx < mx0 + BTN) m.changeDelay(-1);
             else if (mx >= px0 && mx < px0 + BTN) m.changeDelay(1);
-        } else if (m instanceof ShieldBreaker sb && idx == 3) {
-            listening = null;
-            sb.cycleAttackMode();
-        } else if (m instanceof ShieldBreaker sb && idx == 4) {
-            listening = null;
-            sb.cycleBreakMode();
         }
     }
 
