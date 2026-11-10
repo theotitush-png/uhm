@@ -32,6 +32,7 @@ public class ShieldBreaker extends Module {
     private int switchBackDelay = 2;
     private int switchBackWait;
     private boolean pendingSwitchBack;
+    private boolean swordHitDone;
 
     public ShieldBreaker() {
         super("ShieldBreaker", "Break a blocking player's shield automatically or when clicked.", 0, false);
@@ -72,11 +73,19 @@ public class ShieldBreaker extends Module {
             return;
         }
 
-        if (attackMode == AttackMode.AUTO && target == null) {
+        if (pendingSwitchBack) {
+            if (switchBackWait > 0) switchBackWait--;
+            if (switchBackWait == 0) {
+                restoreSlot(p);
+                pendingSwitchBack = false;
+            }
+        }
+
+        if (attackMode == AttackMode.AUTO && target == null && !pendingSwitchBack) {
             startSequence(mc, targetedEntity(mc));
         }
 
-        if (attackMode == AttackMode.MANUAL && target == null) {
+        if (attackMode == AttackMode.MANUAL && target == null && !pendingSwitchBack) {
             boolean down = mc.options.attackKey.isPressed();
             if (down && !manualWasDown) {
                 Entity aimed = targetedEntity(mc);
@@ -94,19 +103,27 @@ public class ShieldBreaker extends Module {
             return;
         }
 
-        if (p.getInventory().getSelectedSlot() != axeSlot) {
-            p.getInventory().setSelectedSlot(axeSlot);
-            switchWait = getDelay();
+        // STUN mode opens with one sword hit, then immediately switches to the axe.
+        int activeSlot = breakMode == BreakMode.STUN && !swordHitDone ? swordSlot : axeSlot;
+        if (activeSlot < 0) {
+            finish(p);
+            return;
+        }
+        if (p.getInventory().getSelectedSlot() != activeSlot) {
+            p.getInventory().setSelectedSlot(activeSlot);
+            switchWait = activeSlot == axeSlot ? getDelay() : 0;
             if (switchWait > 0) return;
         }
         if (switchWait > 0) { switchWait--; return; }
         if (settle > 0) { settle--; return; }
 
-        if (hits > 0) {
-            boolean blocking = target instanceof LivingEntity living && living.isBlocking();
-            if (!blocking || breakMode == BreakMode.NORMAL || hits >= MAX_STUN_HITS) {
-                finish(p);
-                return;
+        if (swordHitDone || breakMode == BreakMode.NORMAL) {
+            if (hits > 0) {
+                boolean blocking = target instanceof LivingEntity living && living.isBlocking();
+                if (!blocking || hits >= MAX_STUN_HITS) {
+                    finish(p);
+                    return;
+                }
             }
         }
 
@@ -114,6 +131,13 @@ public class ShieldBreaker extends Module {
         if (p.getAttackCooldownProgress(0.5f) < 0.9f && attackWait <= 25) return;
         mc.interactionManager.attackEntity(p, target);
         p.swingHand(Hand.MAIN_HAND);
+        if (breakMode == BreakMode.STUN && !swordHitDone) {
+            swordHitDone = true;
+            attackWait = 0;
+            settle = 0;
+            switchWait = 0;
+            return;
+        }
         hits++;
         attackWait = 0;
         settle = 2;
@@ -129,9 +153,15 @@ public class ShieldBreaker extends Module {
         }
         axeSlot = axe;
         swordSlot = findSlot(p, SWORD_PREF, stack -> stack.isIn(ItemTags.SWORDS));
+        if (breakMode == BreakMode.STUN && swordSlot == -1) {
+            axeSlot = -1;
+            RealityClient.chat(mc, "ShieldBreaker: no sword in your hotbar");
+            return;
+        }
         previousSlot = p.getInventory().getSelectedSlot();
         target = entity;
         hits = attackWait = switchWait = settle = total = 0;
+        swordHitDone = breakMode != BreakMode.STUN;
     }
 
     private int findSlot(ClientPlayerEntity p, int preferred, Predicate<ItemStack> test) {
@@ -143,6 +173,7 @@ public class ShieldBreaker extends Module {
     private void finish(ClientPlayerEntity p) {
         target = null;
         hits = attackWait = switchWait = settle = total = 0;
+        swordHitDone = false;
         pendingSwitchBack = true;
         switchBackWait = switchBackDelay;
         if (switchBackWait == 0) {
@@ -173,6 +204,7 @@ public class ShieldBreaker extends Module {
         target = null;
         pendingSwitchBack = false;
         switchBackWait = 0;
+        swordHitDone = false;
         hits = attackWait = switchWait = settle = total = 0;
     }
 
