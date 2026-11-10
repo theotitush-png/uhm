@@ -241,7 +241,11 @@ public class ClickGuiScreen extends Screen {
                     if (m instanceof ShieldBreaker sb) {
                         ctx.drawTextWithShadow(textRenderer, "Enabled", px + 20, y + 5, TEXT_DIM);
                         String enabled = sb.isEnabled() ? "ON" : "OFF";
-                        ctx.drawTextWithShadow(textRenderer, enabled, rightEdge(px) - textRenderer.getWidth(enabled), y + 5, sb.isEnabled() ? ACCENT : TEXT_DIM);
+                        int ex = rightEdge(px) - 38;
+                        ctx.fill(ex, y + 2, rightEdge(px), y + SROW - 2, KEY_BG);
+                        ctx.drawTextWithShadow(textRenderer, enabled,
+                                ex + (38 - textRenderer.getWidth(enabled)) / 2, y + 5,
+                                sb.isEnabled() ? ACCENT : TEXT_DIM);
 
                         int ay = y + SROW;
                         ctx.drawTextWithShadow(textRenderer, "Attack Mode", px + 20, ay + 5, TEXT_DIM);
