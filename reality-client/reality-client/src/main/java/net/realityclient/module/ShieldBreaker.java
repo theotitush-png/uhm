@@ -183,8 +183,8 @@ public class ShieldBreaker extends Module {
     }
 
     private void restoreSlot(ClientPlayerEntity p) {
-        int back = swordSlot != -1 ? swordSlot : previousSlot;
-        if (back >= 0) p.getInventory().setSelectedSlot(back);
+        // Return to the slot the player was holding before the stun sequence.
+        if (previousSlot >= 0) p.getInventory().setSelectedSlot(previousSlot);
         axeSlot = swordSlot = previousSlot = -1;
     }
 
