@@ -15,6 +15,7 @@ public class BowBoost extends Module {
     private float previousYaw;
     private float previousPitch;
     private int drawTicks;
+    private int waitTicks;
     private boolean started;
 
     public BowBoost() {
@@ -45,6 +46,7 @@ public class BowBoost extends Module {
         previousYaw = player.getYaw();
         previousPitch = player.getPitch();
         drawTicks = 0;
+        waitTicks = 0;
         started = false;
         player.getInventory().setSelectedSlot(bowSlot);
         if (rotations) player.setPitch(targetPitch);
@@ -63,6 +65,7 @@ public class BowBoost extends Module {
         }
         bowSlot = previousSlot = -1;
         drawTicks = 0;
+        waitTicks = 0;
         started = false;
     }
 
@@ -91,9 +94,7 @@ public class BowBoost extends Module {
                 player.stopUsingItem();
                 toggle(mc);
             }
-        } else if (drawTicks > 0) {
-            toggle(mc);
-        } else if (drawTicks > 5) {
+        } else if (++waitTicks > 5) {
             toggle(mc);
         }
     }
