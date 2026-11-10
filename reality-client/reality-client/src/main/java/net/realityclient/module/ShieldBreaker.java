@@ -36,7 +36,6 @@ public class ShieldBreaker extends Module {
 
     public ShieldBreaker() {
         super("ShieldBreaker", "Break a blocking player's shield automatically or when clicked.", 0, false);
-        enableDelay(2, 0, 20);
     }
 
     public AttackMode getAttackMode() { return attackMode; }
@@ -111,7 +110,7 @@ public class ShieldBreaker extends Module {
         }
         if (p.getInventory().getSelectedSlot() != activeSlot) {
             p.getInventory().setSelectedSlot(activeSlot);
-            switchWait = activeSlot == axeSlot ? getDelay() : 0;
+            switchWait = 0;
             if (switchWait > 0) return;
         }
         if (switchWait > 0) { switchWait--; return; }
