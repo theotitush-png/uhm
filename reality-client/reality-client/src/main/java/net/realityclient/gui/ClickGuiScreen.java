@@ -24,7 +24,7 @@ import java.util.Set;
 public class ClickGuiScreen extends Screen {
     private static final int W = 210;
     private static final int ROW = 38;
-    private static final int SROW = 26;
+    private static final int SROW = 38;
     private static final int HEADER = 34;
     private static final int GAP = 14;
     private static final int TOP = 106;
@@ -139,25 +139,28 @@ public class ClickGuiScreen extends Screen {
     }
     private int minusX(Module m, int px) { return valueX(m, px) - 4 - BTN; }
 
+    private int delayTrackStart(int px) { return px + 20; }
+    private int delayTrackEnd(int px) { return rightEdge(px) - 4; }
+
     private void drawDelayRow(DrawContext ctx, int px, int dy, String label, int value) {
-        ctx.drawTextWithShadow(textRenderer, label, px + 20, dy + 5, TEXT_DIM);
-        int right = rightEdge(px);
-        int plus = right - BTN;
-        int valueRight = plus - 4;
-        String valueText = value * 50 + " ms";
-        int valueX = valueRight - textRenderer.getWidth(valueText);
-        int minus = valueX - 4 - BTN;
-        ctx.fill(minus, dy + 3, minus + BTN, dy + SROW - 3, KEY_BG);
-        ctx.drawTextWithShadow(textRenderer, "-", minus + 4, dy + 5, TEXT_ACCENT);
-        ctx.drawTextWithShadow(textRenderer, valueText, valueX, dy + 5, TEXT);
-        ctx.fill(plus, dy + 3, plus + BTN, dy + SROW - 3, KEY_BG);
-        ctx.drawTextWithShadow(textRenderer, "+", plus + 3, dy + 5, TEXT_ACCENT);
+        ctx.drawTextWithShadow(textRenderer, label, px + 20, dy + 4, TEXT_DIM);
+        String valueText = (value * 50) + " ms";
+        ctx.drawTextWithShadow(textRenderer, valueText,
+                rightEdge(px) - textRenderer.getWidth(valueText), dy + 4, TEXT);
+        int left = delayTrackStart(px);
+        int right = delayTrackEnd(px);
+        int trackY = dy + 27;
+        int knobX = left + (right - left) * value / 20;
+        ctx.fill(left, trackY, right, trackY + 2, 0xFF777777);
+        ctx.fill(left, trackY, knobX, trackY + 2, ACCENT);
+        ctx.fill(knobX - 3, trackY - 3, knobX + 4, trackY + 5, TEXT);
     }
 
-    private int delayMinusX(int px, int value) {
-        String valueText = value * 50 + " ms";
-        int plus = rightEdge(px) - BTN;
-        return plus - 4 - textRenderer.getWidth(valueText) - 4 - BTN;
+    private int delayFromClick(int px, double mx) {
+        int left = delayTrackStart(px);
+        int right = delayTrackEnd(px);
+        double ratio = Math.max(0.0, Math.min(1.0, (mx - left) / (double) (right - left)));
+        return (int) Math.round(ratio * 20.0);
     }
 
     // ---- glass drawing helpers ----
@@ -406,17 +409,12 @@ public class ClickGuiScreen extends Screen {
                 sb.cycleBreakMode();
             } else if (idx == 3) {
                 listening = null;
-                int mx0 = delayMinusX(px, m.getDelay());
-                int px0 = plusX(px);
-                if (mx >= mx0 && mx < mx0 + BTN) m.changeDelay(-1);
-                else if (mx >= px0 && mx < px0 + BTN) m.changeDelay(1);
+                int target = delayFromClick(px, mx);
+                m.changeDelay(target - m.getDelay());
             } else if (idx == 4) {
                 listening = null;
-                int value = sb.getSwitchBackDelay();
-                int mx0 = delayMinusX(px, value);
-                int px0 = plusX(px);
-                if (mx >= mx0 && mx < mx0 + BTN) sb.changeSwitchBackDelay(-1);
-                else if (mx >= px0 && mx < px0 + BTN) sb.changeSwitchBackDelay(1);
+                int target = delayFromClick(px, mx);
+                sb.changeSwitchBackDelay(target - sb.getSwitchBackDelay());
             }
             return;
         }
