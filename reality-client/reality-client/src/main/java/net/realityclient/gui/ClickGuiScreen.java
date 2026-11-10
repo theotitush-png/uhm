@@ -254,7 +254,7 @@ public class ClickGuiScreen extends Screen {
                     // delay row
                     if (m.hasDelay()) {
                         int dy = y + 2 * SROW;
-                        ctx.drawTextWithShadow(textRenderer, "Delay", px + 20, dy + 5, TEXT_DIM);
+                        ctx.drawTextWithShadow(textRenderer, "Switch Delay", px + 20, dy + 5, TEXT_DIM);
                         int mx0 = minusX(m, px);
                         int px0 = plusX(px);
                         ctx.fill(mx0, dy + 3, mx0 + BTN, dy + SROW - 3, KEY_BG);
