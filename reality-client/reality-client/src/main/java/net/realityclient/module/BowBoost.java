@@ -56,7 +56,10 @@ public class BowBoost extends Module {
     protected void onDisable(MinecraftClient mc) {
         ClientPlayerEntity player = mc.player;
         if (player != null) {
-            if (player.isUsingItem()) player.stopUsingItem();
+            mc.options.useKey.setPressed(false);
+            if (player.isUsingItem() && mc.interactionManager != null) {
+                mc.interactionManager.stopUsingItem(player);
+            }
             if (previousSlot >= 0) player.getInventory().setSelectedSlot(previousSlot);
             if (rotations && (bowSlot >= 0 || started)) {
                 player.setYaw(previousYaw);
@@ -83,15 +86,20 @@ public class BowBoost extends Module {
                 player.getInventory().setSelectedSlot(bowSlot);
                 return;
             }
+            // Hold the use key so vanilla doesn't cancel the draw on the next tick
+            mc.options.useKey.setPressed(true);
             mc.interactionManager.interactItem(player, Hand.MAIN_HAND);
             started = true;
             return;
         }
 
         if (player.isUsingItem() && player.getActiveItem().isOf(Items.BOW)) {
+            mc.options.useKey.setPressed(true);
             drawTicks++;
             if (drawTicks >= 20) {
-                player.stopUsingItem();
+                mc.options.useKey.setPressed(false);
+                // sends the release packet so the arrow actually fires
+                mc.interactionManager.stopUsingItem(player);
                 toggle(mc);
             }
         } else if (++waitTicks > 5) {
