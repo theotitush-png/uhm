@@ -13,6 +13,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.realityclient.RealityClient;
 import net.realityclient.module.Module;
+import net.realityclient.module.BowBoost;
 import net.realityclient.module.ShieldBreaker;
 import org.lwjgl.glfw.GLFW;
 
@@ -85,7 +86,7 @@ public class ClickGuiScreen extends Screen {
     }
 
     private int settingCount(Module m) {
-        return m instanceof ShieldBreaker ? 5 : (m.hasDelay() ? 3 : 2);
+        return m instanceof ShieldBreaker ? 5 : (m instanceof BowBoost ? 4 : (m.hasDelay() ? 3 : 2));
     }
 
     private int panelHeight(String cat) {
@@ -262,7 +263,38 @@ public class ClickGuiScreen extends Screen {
                     int n = settingCount(m);
                     ctx.fill(px + 3, y, px + W - 3, y + n * SROW, SET_BG);
 
-                    if (m instanceof ShieldBreaker sb) {
+                    if (m instanceof BowBoost bb) {
+                        ctx.drawTextWithShadow(textRenderer, "Enabled", px + 20, y + 5, TEXT_DIM);
+                        String enabled = bb.isEnabled() ? "ON" : "OFF";
+                        ctx.drawTextWithShadow(textRenderer, enabled,
+                                rightEdge(px) - textRenderer.getWidth(enabled), y + 5,
+                                bb.isEnabled() ? ACCENT : TEXT_DIM);
+
+                        int ky = y + SROW;
+                        ctx.drawTextWithShadow(textRenderer, "Keybind", px + 20, ky + 5, TEXT_DIM);
+                        String kt = keyText(m);
+                        ctx.drawTextWithShadow(textRenderer, kt,
+                                rightEdge(px) - textRenderer.getWidth(kt), ky + 5, TEXT_ACCENT);
+
+                        int ry = y + 2 * SROW;
+                        ctx.drawTextWithShadow(textRenderer, "Rotations", px + 20, ry + 5, TEXT_DIM);
+                        String rotation = bb.hasRotations() ? "ON" : "OFF";
+                        ctx.drawTextWithShadow(textRenderer, rotation,
+                                rightEdge(px) - textRenderer.getWidth(rotation), ry + 5, TEXT_ACCENT);
+
+                        int py = y + 3 * SROW;
+                        ctx.drawTextWithShadow(textRenderer, "Target Pitch", px + 20, py + 5, TEXT_DIM);
+                        String pitch = bb.getTargetPitch() + "°";
+                        ctx.drawTextWithShadow(textRenderer, pitch,
+                                rightEdge(px) - textRenderer.getWidth(pitch), py + 5, TEXT);
+                        int left = delayTrackStart(px);
+                        int right = delayTrackEnd(px);
+                        int trackY = py + 27;
+                        int knobX = left + (right - left) * bb.getTargetPitch() / 90;
+                        ctx.fill(left, trackY, right, trackY + 2, 0xFF777777);
+                        ctx.fill(left, trackY, knobX, trackY + 2, ACCENT);
+                        ctx.fill(knobX - 3, trackY - 3, knobX + 4, trackY + 5, TEXT);
+                    } else if (m instanceof ShieldBreaker sb) {
                         ctx.drawTextWithShadow(textRenderer, "Enabled", px + 20, y + 5, TEXT_DIM);
                         String enabled = sb.isEnabled() ? "ON" : "OFF";
                         int ex = rightEdge(px) - 38;
@@ -397,6 +429,25 @@ public class ClickGuiScreen extends Screen {
 
     private void handleSetting(Module m, int idx, double mx, int px) {
         MinecraftClient mc = MinecraftClient.getInstance();
+        if (m instanceof BowBoost bb) {
+            if (idx == 0) {
+                listening = null;
+                bb.toggle(mc);
+            } else if (idx == 1) {
+                listening = m;
+            } else if (idx == 2) {
+                listening = null;
+                bb.toggleRotations();
+            } else if (idx == 3) {
+                listening = null;
+                int left = delayTrackStart(px);
+                int right = delayTrackEnd(px);
+                double ratio = Math.max(0.0, Math.min(1.0, (mx - left) / (double) (right - left)));
+                int pitch = (int) Math.round(ratio * 90.0);
+                bb.changeTargetPitch(pitch - bb.getTargetPitch());
+            }
+            return;
+        }
         if (m instanceof ShieldBreaker sb) {
             if (idx == 0) {
                 listening = null;
