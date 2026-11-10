@@ -15,7 +15,6 @@ import net.realityclient.module.FastXp;
 import net.realityclient.module.Freecam;
 import net.realityclient.module.Module;
 import net.realityclient.module.ShieldBreaker;
-import net.realityclient.module.StunCobweb;
 import net.realityclient.module.Xray;
 import org.lwjgl.glfw.GLFW;
 
@@ -35,7 +34,6 @@ public class RealityClient implements ClientModInitializer {
                 new KeyBinding("key.realityclient.gui",
                         InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, CATEGORY));
 
-        register(new StunCobweb());
         register(new ShieldBreaker());
         register(new AutoDrain());
         register(new FastPlace());
@@ -55,10 +53,12 @@ public class RealityClient implements ClientModInitializer {
     }
 
     private static void register(Module m) {
-        KeyBinding kb = KeyBindingHelper.registerKeyBinding(
-                new KeyBinding("key.realityclient." + m.getName().toLowerCase(),
-                        InputUtil.Type.KEYSYM, m.getDefaultKey(), CATEGORY));
-        m.setKeyBinding(kb);
+        if (m.getDefaultKey() != 0) {
+            KeyBinding kb = KeyBindingHelper.registerKeyBinding(
+                    new KeyBinding("key.realityclient." + m.getName().toLowerCase(),
+                            InputUtil.Type.KEYSYM, m.getDefaultKey(), CATEGORY));
+            m.setKeyBinding(kb);
+        }
         MODULES.add(m);
     }
 

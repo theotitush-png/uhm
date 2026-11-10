@@ -13,6 +13,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.realityclient.RealityClient;
 import net.realityclient.module.Module;
+import net.realityclient.module.ShieldBreaker;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -23,7 +24,7 @@ import java.util.Set;
 public class ClickGuiScreen extends Screen {
     private static final int W = 210;
     private static final int ROW = 38;
-    private static final int SROW = 26;
+    private static final int SROW = 38;
     private static final int HEADER = 34;
     private static final int GAP = 14;
     private static final int TOP = 106;
@@ -84,7 +85,7 @@ public class ClickGuiScreen extends Screen {
     }
 
     private int settingCount(Module m) {
-        return m.hasDelay() ? 3 : 2;
+        return m instanceof ShieldBreaker ? 5 : (m.hasDelay() ? 3 : 2);
     }
 
     private int panelHeight(String cat) {
@@ -137,6 +138,30 @@ public class ClickGuiScreen extends Screen {
         return plusX(px) - 4 - textRenderer.getWidth(String.valueOf(m.getDelay()));
     }
     private int minusX(Module m, int px) { return valueX(m, px) - 4 - BTN; }
+
+    private int delayTrackStart(int px) { return px + 20; }
+    private int delayTrackEnd(int px) { return rightEdge(px) - 4; }
+
+    private void drawDelayRow(DrawContext ctx, int px, int dy, String label, int value) {
+        ctx.drawTextWithShadow(textRenderer, label, px + 20, dy + 4, TEXT_DIM);
+        String valueText = (value * 50) + " ms";
+        ctx.drawTextWithShadow(textRenderer, valueText,
+                rightEdge(px) - textRenderer.getWidth(valueText), dy + 4, TEXT);
+        int left = delayTrackStart(px);
+        int right = delayTrackEnd(px);
+        int trackY = dy + 27;
+        int knobX = left + (right - left) * value / 20;
+        ctx.fill(left, trackY, right, trackY + 2, 0xFF777777);
+        ctx.fill(left, trackY, knobX, trackY + 2, ACCENT);
+        ctx.fill(knobX - 3, trackY - 3, knobX + 4, trackY + 5, TEXT);
+    }
+
+    private int delayFromClick(int px, double mx) {
+        int left = delayTrackStart(px);
+        int right = delayTrackEnd(px);
+        double ratio = Math.max(0.0, Math.min(1.0, (mx - left) / (double) (right - left)));
+        return (int) Math.round(ratio * 20.0);
+    }
 
     // ---- glass drawing helpers ----
 
@@ -237,6 +262,28 @@ public class ClickGuiScreen extends Screen {
                     int n = settingCount(m);
                     ctx.fill(px + 3, y, px + W - 3, y + n * SROW, SET_BG);
 
+                    if (m instanceof ShieldBreaker sb) {
+                        ctx.drawTextWithShadow(textRenderer, "Enabled", px + 20, y + 5, TEXT_DIM);
+                        String enabled = sb.isEnabled() ? "ON" : "OFF";
+                        int ex = rightEdge(px) - 38;
+                        ctx.fill(ex, y + 2, rightEdge(px), y + SROW - 2, KEY_BG);
+                        ctx.drawTextWithShadow(textRenderer, enabled,
+                                ex + (38 - textRenderer.getWidth(enabled)) / 2, y + 5,
+                                sb.isEnabled() ? ACCENT : TEXT_DIM);
+
+                        int ay = y + SROW;
+                        ctx.drawTextWithShadow(textRenderer, "Attack Mode", px + 20, ay + 5, TEXT_DIM);
+                        String attackMode = sb.getAttackMode() == ShieldBreaker.AttackMode.AUTO ? "AUTO" : "MANUAL";
+                        ctx.drawTextWithShadow(textRenderer, attackMode, rightEdge(px) - textRenderer.getWidth(attackMode), ay + 5, TEXT_ACCENT);
+
+                        int by = y + 2 * SROW;
+                        ctx.drawTextWithShadow(textRenderer, "Break Type", px + 20, by + 5, TEXT_DIM);
+                        String breakMode = sb.getBreakMode() == ShieldBreaker.BreakMode.STUN ? "STUN" : "NORMAL";
+                        ctx.drawTextWithShadow(textRenderer, breakMode, rightEdge(px) - textRenderer.getWidth(breakMode), by + 5, TEXT_ACCENT);
+
+                        drawDelayRow(ctx, px, y + 3 * SROW, "Switch Delay", m.getDelay());
+                        drawDelayRow(ctx, px, y + 4 * SROW, "Switch Back Delay", sb.getSwitchBackDelay());
+                    } else {
                     // keybind row
                     ctx.drawTextWithShadow(textRenderer, "Keybind", px + 20, y + 5, TEXT_DIM);
                     String kt = keyText(m);
@@ -254,7 +301,7 @@ public class ClickGuiScreen extends Screen {
                     // delay row
                     if (m.hasDelay()) {
                         int dy = y + 2 * SROW;
-                        ctx.drawTextWithShadow(textRenderer, "Delay", px + 20, dy + 5, TEXT_DIM);
+                        ctx.drawTextWithShadow(textRenderer, "Switch Delay", px + 20, dy + 5, TEXT_DIM);
                         int mx0 = minusX(m, px);
                         int px0 = plusX(px);
                         ctx.fill(mx0, dy + 3, mx0 + BTN, dy + SROW - 3, KEY_BG);
@@ -263,7 +310,20 @@ public class ClickGuiScreen extends Screen {
                         ctx.fill(px0, dy + 3, px0 + BTN, dy + SROW - 3, KEY_BG);
                         ctx.drawTextWithShadow(textRenderer, "+", px0 + 3, dy + 5, TEXT_ACCENT);
                     }
-                    y += n * SROW;
+
+                    if (m instanceof ShieldBreaker sb) {
+                        int ay = y + 3 * SROW;
+                        ctx.drawTextWithShadow(textRenderer, "Attack Mode", px + 20, ay + 5, TEXT_DIM);
+                        String attackMode = sb.getAttackMode() == ShieldBreaker.AttackMode.AUTO ? "AUTO" : "MANUAL";
+                        ctx.drawTextWithShadow(textRenderer, attackMode, rightEdge(px) - textRenderer.getWidth(attackMode), ay + 5, TEXT_ACCENT);
+
+                        int by = y + 4 * SROW;
+                        ctx.drawTextWithShadow(textRenderer, "Break Type", px + 20, by + 5, TEXT_DIM);
+                        String breakMode = sb.getBreakMode() == ShieldBreaker.BreakMode.STUN ? "STUN" : "NORMAL";
+                        ctx.drawTextWithShadow(textRenderer, breakMode, rightEdge(px) - textRenderer.getWidth(breakMode), by + 5, TEXT_ACCENT);
+                    }
+
+                    }                    y += n * SROW;
                 }
             }
         }
@@ -337,11 +397,32 @@ public class ClickGuiScreen extends Screen {
 
     private void handleSetting(Module m, int idx, double mx, int px) {
         MinecraftClient mc = MinecraftClient.getInstance();
+        if (m instanceof ShieldBreaker sb) {
+            if (idx == 0) {
+                listening = null;
+                sb.toggle(mc);
+            } else if (idx == 1) {
+                listening = null;
+                sb.cycleAttackMode();
+            } else if (idx == 2) {
+                listening = null;
+                sb.cycleBreakMode();
+            } else if (idx == 3) {
+                listening = null;
+                int target = delayFromClick(px, mx);
+                m.changeDelay(target - m.getDelay());
+            } else if (idx == 4) {
+                listening = null;
+                int target = delayFromClick(px, mx);
+                sb.changeSwitchBackDelay(target - sb.getSwitchBackDelay());
+            }
+            return;
+        }
         if (idx == 0) {
-            listening = m;                 // keybind
+            listening = m;
         } else if (idx == 1) {
             listening = null;
-            m.switchMode(mc);              // hold / toggle
+            m.switchMode(mc);
         } else if (idx == 2 && m.hasDelay()) {
             listening = null;
             int mx0 = minusX(m, px);
