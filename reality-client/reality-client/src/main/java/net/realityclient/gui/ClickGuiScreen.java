@@ -13,6 +13,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.realityclient.RealityClient;
 import net.realityclient.module.Module;
+import net.realityclient.module.ShieldBreaker;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -84,7 +85,7 @@ public class ClickGuiScreen extends Screen {
     }
 
     private int settingCount(Module m) {
-        return m.hasDelay() ? 3 : 2;
+        return m instanceof ShieldBreaker ? 5 : (m.hasDelay() ? 3 : 2);
     }
 
     private int panelHeight(String cat) {
@@ -263,6 +264,18 @@ public class ClickGuiScreen extends Screen {
                         ctx.fill(px0, dy + 3, px0 + BTN, dy + SROW - 3, KEY_BG);
                         ctx.drawTextWithShadow(textRenderer, "+", px0 + 3, dy + 5, TEXT_ACCENT);
                     }
+
+                    if (m instanceof ShieldBreaker sb) {
+                        int ay = y + 3 * SROW;
+                        ctx.drawTextWithShadow(textRenderer, "Attack Mode", px + 20, ay + 5, TEXT_DIM);
+                        String attackMode = sb.getAttackMode() == ShieldBreaker.AttackMode.AUTO ? "AUTO" : "MANUAL";
+                        ctx.drawTextWithShadow(textRenderer, attackMode, rightEdge(px) - textRenderer.getWidth(attackMode), ay + 5, TEXT_ACCENT);
+
+                        int by = y + 4 * SROW;
+                        ctx.drawTextWithShadow(textRenderer, "Break Type", px + 20, by + 5, TEXT_DIM);
+                        String breakMode = sb.getBreakMode() == ShieldBreaker.BreakMode.STUN ? "STUN" : "NORMAL";
+                        ctx.drawTextWithShadow(textRenderer, breakMode, rightEdge(px) - textRenderer.getWidth(breakMode), by + 5, TEXT_ACCENT);
+                    }
                     y += n * SROW;
                 }
             }
@@ -348,6 +361,12 @@ public class ClickGuiScreen extends Screen {
             int px0 = plusX(px);
             if (mx >= mx0 && mx < mx0 + BTN) m.changeDelay(-1);
             else if (mx >= px0 && mx < px0 + BTN) m.changeDelay(1);
+        } else if (m instanceof ShieldBreaker sb && idx == 3) {
+            listening = null;
+            sb.cycleAttackMode();
+        } else if (m instanceof ShieldBreaker sb && idx == 4) {
+            listening = null;
+            sb.cycleBreakMode();
         }
     }
 
