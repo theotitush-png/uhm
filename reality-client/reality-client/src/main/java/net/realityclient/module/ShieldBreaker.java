@@ -26,13 +26,12 @@ public class ShieldBreaker extends Module {
     private AttackMode attackMode = AttackMode.AUTO;
     private BreakMode breakMode = BreakMode.STUN;
     private boolean manualWasDown;
-    private boolean manualStarted;
     private Entity target;
     private int axeSlot = -1, swordSlot = -1, previousSlot = -1;
     private int hits, attackWait, switchWait, settle, total;
 
     public ShieldBreaker() {
-        super("ShieldBreaker", "Automatically or manually break a blocking player's shield.", GLFW.GLFW_KEY_Z, true);
+        super("ShieldBreaker", "Break a blocking player's shield automatically or when clicked.", 0, false);
         enableDelay(2, 0, 20);
     }
 
@@ -49,9 +48,8 @@ public class ShieldBreaker extends Module {
 
     @Override
     protected void onEnable(MinecraftClient mc) {
-        manualStarted = false;
         manualWasDown = false;
-        if (attackMode == AttackMode.AUTO) startSequence(mc, targetedEntity(mc));
+        clearState();
     }
 
     @Override
@@ -67,12 +65,15 @@ public class ShieldBreaker extends Module {
             return;
         }
 
+        if (attackMode == AttackMode.AUTO && target == null) {
+            startSequence(mc, targetedEntity(mc));
+        }
+
         if (attackMode == AttackMode.MANUAL && target == null) {
             boolean down = mc.options.attackKey.isPressed();
             if (down && !manualWasDown) {
                 Entity aimed = targetedEntity(mc);
                 if (aimed instanceof LivingEntity living && living.isBlocking()) {
-                    manualStarted = true;
                     startSequence(mc, aimed);
                 }
             }
