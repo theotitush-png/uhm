@@ -29,6 +29,9 @@ public class ShieldBreaker extends Module {
     private Entity target;
     private int axeSlot = -1, swordSlot = -1, previousSlot = -1;
     private int hits, attackWait, switchWait, settle, total;
+    private int switchBackDelay = 2;
+    private int switchBackWait;
+    private boolean pendingSwitchBack;
 
     public ShieldBreaker() {
         super("ShieldBreaker", "Break a blocking player's shield automatically or when clicked.", 0, false);
@@ -37,6 +40,10 @@ public class ShieldBreaker extends Module {
 
     public AttackMode getAttackMode() { return attackMode; }
     public BreakMode getBreakMode() { return breakMode; }
+    public int getSwitchBackDelay() { return switchBackDelay; }
+    public void changeSwitchBackDelay(int amount) {
+        switchBackDelay = Math.max(0, Math.min(20, switchBackDelay + amount));
+    }
     public void cycleAttackMode() {
         attackMode = attackMode == AttackMode.AUTO ? AttackMode.MANUAL : AttackMode.AUTO;
         resetSequence(MinecraftClient.getInstance());
@@ -134,18 +141,38 @@ public class ShieldBreaker extends Module {
     }
 
     private void finish(ClientPlayerEntity p) {
+        target = null;
+        hits = attackWait = switchWait = settle = total = 0;
+        pendingSwitchBack = true;
+        switchBackWait = switchBackDelay;
+        if (switchBackWait == 0) {
+            restoreSlot(p);
+            pendingSwitchBack = false;
+        }
+    }
+
+    private void restoreSlot(ClientPlayerEntity p) {
         int back = swordSlot != -1 ? swordSlot : previousSlot;
         if (back >= 0) p.getInventory().setSelectedSlot(back);
-        clearState();
+        axeSlot = swordSlot = previousSlot = -1;
     }
 
     private void resetSequence(MinecraftClient mc) {
-        if (target != null && mc.player != null) finish(mc.player);
-        else clearState();
+        if ((target != null || pendingSwitchBack) && mc.player != null) {
+            if (target != null) {
+                target = null;
+                restoreSlot(mc.player);
+            } else if (pendingSwitchBack) {
+                restoreSlot(mc.player);
+            }
+        }
+        clearState();
     }
 
     private void clearState() {
         target = null;
+        pendingSwitchBack = false;
+        switchBackWait = 0;
         hits = attackWait = switchWait = settle = total = 0;
     }
 
