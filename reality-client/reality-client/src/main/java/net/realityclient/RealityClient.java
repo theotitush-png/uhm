@@ -15,7 +15,7 @@ import net.realityclient.module.FastXp;
 import net.realityclient.module.Freecam;
 import net.realityclient.module.Module;
 import net.realityclient.module.ShieldBreaker;
-import net.realityclient.module.StunCobweb;
+import net.realityclient.module.Stun;
 import net.realityclient.module.Xray;
 import org.lwjgl.glfw.GLFW;
 
@@ -35,7 +35,7 @@ public class RealityClient implements ClientModInitializer {
                 new KeyBinding("key.realityclient.gui",
                         InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, CATEGORY));
 
-        register(new StunCobweb());
+        register(new Stun());
         register(new ShieldBreaker());
         register(new AutoDrain());
         register(new FastPlace());
